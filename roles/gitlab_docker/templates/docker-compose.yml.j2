@@ -1,0 +1,73 @@
+version: '3'
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:{{ gitlab_version }}
+    container_name: {{ gitlab_container_name }}
+    hostname: git.ivyts.com
+    env_file:
+      - .env
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url "https://{{ gitlab_host }}"
+        registry_external_url "https://{{ registry_host }}"
+        gitlab_rails['backup_keep_time'] = "{{ gitlab_backup_keep_seconds }}"
+        gitlab_rails['smtp_enable'] = true
+        gitlab_rails['smtp_address'] = "smtp-mail.outlook.com"
+        gitlab_rails['smtp_port'] = "587"
+        gitlab_rails['smtp_user_name'] = "info@ivyts.com"
+        gitlab_rails['smtp_password'] = "${SMTP_PASS}"
+        gitlab_rails['smtp_domain'] = "ivyts.com"
+        gitlab_rails['smtp_authentication'] = "login"
+        gitlab_rails['smtp_enable_starttls_auto'] = true
+        gitlab_rails['smtp_openssl_verify_mode'] = 'peer'
+        gitlab_rails['gitlab_email_from'] = "info@ivyts.com"
+        gitlab_rails['gitlab_email_reply_to'] = "noreply@ivyts.com"
+        gitlab_rails['lfs_enabled'] = true
+        gitlab_rails['packages_enabled'] = true        
+        nginx['enable'] = false
+        letsencrypt['enable'] = false
+        nginx['listen_port'] = 80
+        prometheus_monitoring['enable'] = false
+        registry['registry_http_addr'] = "0.0.0.0:5000"
+        gitlab_rails['trusted_proxies'] = [ '172.16.0.0/12', '10.0.0.0/8' ]
+        gitlab_workhorse['listen_network'] = "tcp"
+        gitlab_workhorse['listen_addr'] = "0.0.0.0:8181"
+    shm_size: 5g    
+    ulimits:
+        nproc: 131070
+        nofile: 65535
+    ports:
+    - 0.0.0.0:8080:80
+    - 0.0.0.0:22:22
+    volumes:
+    - gitlabdata:/var/opt/gitlab
+    - gitlabconf:/etc/gitlab/
+    restart: always
+    logging: &logging
+        options:
+            max-size: 1m
+    networks:
+      gitlab:        
+
+  nginx:
+    image: {{ nginx_image }}
+    container_name: {{ nginx_container_name }}
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - EMAIL=romcheck@gmail.com
+      - DOMAIN={{ gitlab_host }};{{ registry_host }}
+    volumes:
+      - /etc/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /etc/nginx/letsencrypt:/etc/letsencrypt
+      - /etc/nginx/html:/var/www/html
+    networks:
+      - gitlab
+
+networks:
+  gitlab:
+volumes:
+  gitlabdata:
+  gitlabconf:  

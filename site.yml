@@ -1,0 +1,5 @@
+---
+- hosts: ivy
+  become: true
+  roles:
+    - gitlab_docker

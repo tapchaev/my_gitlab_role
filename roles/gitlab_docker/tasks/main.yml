@@ -1,0 +1,46 @@
+- name: Create directories for Docker volumes
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - /etc/gitlab/config
+    - /etc/gitlab/data
+    - /etc/gitlab/logs
+    - /etc/nginx
+    - /etc/nginx/letsencrypt
+    - /etc/nginx/html
+  become: true
+
+- name: Create docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: /srv/docker-compose.yml
+  become: true
+
+- name: Create Nginx config
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+  become: true
+  notify: Restart Nginx
+
+- name: Start Docker containers
+  command: docker-compose -f /srv/docker-compose.yml up -d
+  become: true
+
+- name: Obtain SSL certificate from Let's Encrypt
+  command: >
+    docker run --rm 
+    -v /etc/nginx/letsencrypt:/etc/letsencrypt 
+    -v /etc/nginx/html:/var/www/html 
+    {{ certbot_image }} certonly --webroot 
+    --webroot-path=/var/www/html 
+    --email {{ certbot_email }} 
+    --agree-tos 
+    --no-eff-email 
+    -d git.ivyts.com
+  become: true
+
+- name: Restart Nginx container
+  command: docker restart {{ nginx_container_name }}
+  become: true

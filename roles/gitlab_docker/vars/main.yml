@@ -1,0 +1,21 @@
+---
+gitlab_version: "16.3.2-ce.0"
+nginx_image: "nginx:latest"
+certbot_image: "certbot/certbot:latest"
+certbot_email: "adam@intellectero.com" 
+nginx_container_name: "nginx"
+gitlab_container_name: "gitlab"
+gitlab_host: git.ivyts.com
+registry_host: "{{ gitlab_host | regex_replace('git(.*)', 'registry\\1') }}"
+
+san_list: "{{ gitlab_host }};{{ registry_host }}"
+upstream_list: "gitlab:8181;gitlab:5000"
+gitlab_backup_keep_seconds: 604800
+smtp_host: smtp-mail.outlook.com
+smtp_port: "587"
+smtp_user: info@ivyts.com
+smtp_from: "{{ smtp_user }}"
+smtp_to: tapchaev.kira@mail.ru
+smtp_pass: "{{ lookup('env', 'SMTP_PASS') }}"
+gitlab_token: "{{ lookup('env', 'GITLAB_TOKEN') }}"
+

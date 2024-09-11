@@ -1,0 +1,48 @@
+worker_processes 1;
+events { worker_connections 1024; }
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    sendfile        on;
+    keepalive_timeout  65;
+
+    upstream gitlab_upstream {
+        server gitlab:8181;
+    }
+
+    upstream registry_upstream {
+        server gitlab:5000;
+    }
+
+    server {
+        listen 80;
+        server_name {{ gitlab_host }};
+
+        location /.well-known/acme-challenge/ {
+            root /var/www/html;
+        }
+
+        location / {
+            return 301 https://$host$request_uri;
+        }
+    }
+
+    server {
+        listen 443 ssl;
+        server_name {{ gitlab_host }};
+
+        ssl_certificate /etc/letsencrypt/live/{{ gitlab_host }}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/{{ gitlab_host }}/privkey.pem;
+
+        location / {
+            proxy_pass http://gitlab_upstream;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+      
+}

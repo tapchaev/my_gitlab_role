@@ -1,0 +1,4 @@
+---
+- name: Restart Nginx
+  command: docker restart {{ nginx_container_name }}
+  become: true
